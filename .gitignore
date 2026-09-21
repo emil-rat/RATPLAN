@@ -1,0 +1,27 @@
+# Virtual environments (each component under ITWOM/ and the root package has its own)
+.venv/
+venv/
+
+# Python bytecode / packaging metadata
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Secrets — never commit real credentials
+.env
+.env.*
+!.env.example

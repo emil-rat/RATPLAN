@@ -1,0 +1,28 @@
+[project]
+name = "ratplan-terrain"
+version = "0.1.0"
+description = "RATPLAN's real-terrain plumbing — DTM sampling over ratmap's Lantmäteriet data, and the bridge into ratplan_itm/ratplan_itwom"
+requires-python = ">=3.11"
+dependencies = [
+    "rasterio>=1.3",
+    "pyproj>=3.6",
+    "numpy>=1.26",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3", "pytest-socket>=0.7"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: hits a live external service (ratmap, itm/'s eventual service boundary) — skipped by default",
+]
+addopts = "-m 'not integration' --disable-socket --allow-hosts=127.0.0.1,::1"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["ratplan_terrain*"]
