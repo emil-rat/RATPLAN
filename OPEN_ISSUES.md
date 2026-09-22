@@ -4,6 +4,7 @@
 2026-09-19 - Skapad av Claude — first entries from implementing `ITWOM/itm/` (architecture.md §3, open item 1).
 2026-09-19 - Claude — `itm/` moved to `ITWOM/itm/`, added `ITWOM/itwom/` (SPLAT!/ITWOM as a Docker service, GPL-2.0) and `ITWOM/itwom_client/` (RATPLAN's own arm's-length client), at Emil's request to co-locate both prior-mean implementations. New entries below under "ITWOM/itwom service".
 2026-09-21 - Claude — real Lantmäteriet terrain wired into both ITM and ITWOM via a new minimal `ratplan_terrain/` package; synthetic ITWOM terrain (`Terrain`/base+ridge) removed outright, not kept as a fallback. See "Real terrain wired into both ITM and ITWOM" under Resolved/superseded.
+2026-09-22 - Claude — carryover audit of `pseudocode-v2.md`/`architecture.md` §§5–6/`model.md` §5 against the archived `rattfallan` project found real, not just aspirational, problems; `pseudocode-v2.md` and `architecture.md` §§5–6 marked non-authoritative at Emil's request, DP being re-derived from scratch without the archive. See "Archive carryover audit" under DP/mission-planner design.
 
 Running log of upstream issues, known gaps, and unresolved decisions discovered while building RATPLAN, kept separate from `research/ReadingNotes.md` (which is Emil's own reading notes, not to be edited) and from `architecture.md` (which is the design, not a punch list). Newest entries at the top of each section.
 
@@ -48,6 +49,35 @@ The service requires Docker Desktop running locally (or wherever this gets deplo
 `GroundConstants` defaults (relative permittivity 15, conductivity 0.005 S/m) and `Climate.CONTINENTAL_TEMPERATE` in `ITWOM/itm/ratplan_itm/environment.py` are itmlogic's own example values, not chosen for Swedish/Nordic terrain. Same category of gap as `research/reading_list.md`'s flagged Nordic-β and vegetation-attenuation gaps — a field-calibration problem, not a code problem. Exposed as overridable parameters so calibration can happen without touching this module's code.
 
 ---
+
+## DP / mission-planner design
+
+### Archive carryover audit (2026-09-22) — pseudocode-v2.md / architecture.md §§5–6 / model.md §5 not to be trusted as spec
+Emil asked that the archived predecessor (`../arkiv/RATPLAN - gammal/`, and a diverged sibling snapshot
+`../arkiv/rattfallan/` the current repo hadn't previously consulted) not be used as a source for this restart
+at all, after a review turned up real problems, not just unvalidated stubs:
+
+- `pseudocode-v2.md` was restored and labeled "the authoritative spec, verbatim," but the archive's own final
+  `planner/dp.py`/`primitives/evaluate.py` had already diverged from it (a separate puck-placement vs.
+  starting-position `Evaluate` split, folding the rat's own onboard antenna into reported coverage via
+  `covered_raster | start_scan(c)`, a relay-position eval cache) — none of that is reflected in the pseudocode.
+- `model.md` §5's candidate-eligibility (`near_edge`) formula restates the archive's `GridCoverageRaster.near_edge`
+  as clean math, dropping that method's own docstring admission that it's a straight-line/isotropic-circle
+  heuristic that's *wrong* once the coverage raster has a real DTM-LOS shape — exactly what `Scan` now
+  produces via ITM/ITWOM. Don't port this formula; eligibility needs re-deriving against the real raster shape.
+- The archive's local routing layer (`routing/router.py`) hand-duplicates `ratmap`'s `speed_based_weight`
+  under an unstated assumption that road cost is symmetric — the archive's own `requirements-ratmap.md`
+  flagged this as conditionally-true-today, not invariant, and a drift risk if `ratmap`'s weight function
+  ever changes. Prefer querying `ratmap` for route cost over re-deriving its weight function locally.
+- Archive's `Evaluate`/`Scan` defaults were literally `random.random()` and a flat circle per the archive's
+  own `CLAUDE.md` — confirms nothing about their scoring logic should be ported (already moot: `Scan` is real
+  physics now, `Evaluate`'s combination rule is already flagged as unspecified in `model.md` §6).
+
+Action taken: `pseudocode-v2.md` and `architecture.md` §§5–6 marked non-authoritative in-place (banners at
+each doc's top), kept on disk for historical context only. `model.md` §5 not yet marked — same caveat applies
+(the `near_edge` formula above lives there) but hasn't been annotated yet. The DP (state/value definition,
+recurrence, eligibility, routing) is being re-derived from scratch against `KONTEXT.md` and the real
+`ITWOM`/`ratplan_terrain` primitives, not from the archive.
 
 ## Resolved / superseded
 

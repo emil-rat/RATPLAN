@@ -6,7 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Restart, connectivity module working end-to-end against real terrain, mission-planner library only a
 minimal seed so far.** This is a fresh `RATPLAN/` (the predecessor project, `rattfallan`, is archived at
-`../arkiv/RATPLAN - gammal/` — read from for provenance, never edited). What exists today:
+`../arkiv/RATPLAN - gammal/` and a diverged sibling snapshot `../arkiv/rattfallan/` — read from for
+provenance, never edited). **2026-09-22: per Emil's explicit instruction, the archived project is no longer
+to be used as a source for this restart at all** — a carryover audit found real problems in what had been
+inherited from it (not just unvalidated stubs), documented in `OPEN_ISSUES.md`'s "Archive carryover audit"
+entry. `pseudocode-v2.md` and `architecture.md` §§5–6 are marked non-authoritative in-place as a result (kept
+on disk for historical context only); the DP is being re-derived from scratch against `KONTEXT.md` and the
+real `ITWOM`/`ratplan_terrain` primitives, starting with `ratplan_planner/` (below). What exists today:
 
 - **`ITWOM/`** — the connectivity module's two physics-prior implementations, both working end-to-end
   against real Lantmäteriet terrain (via `ratplan_terrain/`, below):
@@ -29,11 +35,18 @@ minimal seed so far.** This is a fresh `RATPLAN/` (the predecessor project, `rat
   own terrain inputs).
 - **`mapviz/`** — a scoped-down visual sanity-check tool (terrain hillshade + road network on MapLibre), not
   wired to `Scan` yet. See `mapviz/README.md`.
-- **Not yet built**: the DP mission planner and its remaining swappable primitives (Evaluate/BatteryModel/
-  Samband, routing) — `architecture.md` §6 fixes a target layout for this, written before `ratplan_terrain/`
-  existed as its own separate package, so treat its package name/location for the terrain pieces as
-  superseded by `ratplan_terrain/` rather than authoritative — and the GP/kriging Bayesian-correction layer
-  on top of ITM/ITWOM (`model.md` §3 — designed, not implemented).
+- **`ratplan_planner/`** — the mission-planner package (own `pyproject.toml`/`.venv`, depends on
+  `ratplan_terrain`), started fresh 2026-09-22 without reference to the archive. So far: `models/` (`RouteLeg`,
+  `CoverageRaster` — a real lat/lon covered-cell grid with a reachable-cell-boundary eligibility filter,
+  re-derived from model.md §5 to replace the archive's isotropic-circle `near_edge` formula, which didn't hold
+  for a real DTM-LOS-shaped raster; `MissionInput` fields taken directly from `KONTEXT.md`'s "Indata", not
+  `pseudocode-v2.md`; `CandidateResult`/`PlanResult` from `KONTEXT.md`'s "Utdata") and `primitives/protocols.py`
+  (the five swappable-primitive `Protocol`s: `Scan`/`Evaluate`/`BatteryModel`/`Samband`/`Router`, unimplemented).
+  **Not yet built**: the real `Scan` implementation (grid-sampling via `ratplan_itm`/`ratplan_itwom` — needs a
+  resolution/performance budget first), the road-graph candidate generator, `planner/dp.py` itself, the local
+  `Router` (needs re-justifying the symmetric-cost assumption per the carryover audit, not silently re-porting
+  it), and `Evaluate`/`BatteryModel`/`Samband` (still no math — `model.md` §§6–7) — and the GP/kriging
+  Bayesian-correction layer on top of ITM/ITWOM (`model.md` §3 — designed, not implemented).
 
 Two documents split "what RATPLAN computes" from "how it's built":
 
@@ -41,9 +54,10 @@ Two documents split "what RATPLAN computes" from "how it's built":
   boundaries (why ITWOM runs as its own Docker service), package layout, testing strategy, `mapviz`.
 - **[`model.md`](./model.md)** — the mathematical model: the GP/kriging connectivity-correction math (mean
   function, covariance, parameter estimation, online update, open modeling questions), and the DP mission
-  planner's value function/recurrence. `pseudocode-v2.md` is still the authoritative spec for the DP's
-  control flow and candidate-generation details; `model.md` §5 just restates its math in one place next to
-  the connectivity model.
+  planner's value function/recurrence. `pseudocode-v2.md` is **not** authoritative for the DP's control flow
+  or candidate-generation details as of 2026-09-22 (see "Project status" above) — `model.md` §5 is the
+  current source for the value function/recurrence/eligibility filter, itself partly re-derived from the
+  archive-free redesign, not just a restatement.
 
 When the two disagree on *what* a component computes, `model.md` wins; on *where/how it runs*,
 `architecture.md` wins.
@@ -58,6 +72,12 @@ cd ITWOM/itwom_client && python -m venv .venv && .venv/Scripts/pip install -e ".
 
 # ratplan_terrain (real-terrain plumbing) -- from RATPLAN/
 python -m venv .venv && .venv/Scripts/pip install -e ".[dev]" && .venv/Scripts/pytest
+
+# ratplan_planner (mission planner) -- from RATPLAN/ratplan_planner/; needs Python >=3.11,
+# ratplan_terrain, ratplan_itm (Scan/GpCorrector call it directly, not just via ratplan_terrain), and
+# ratplan_itwom_client (ratplan_terrain.primitives.terrain_profile imports it unconditionally even though
+# Scan only ever uses the ITM half) installed alongside it
+cd ratplan_planner && python -m venv .venv && .venv/Scripts/pip install -e ".[dev]" -e ".." -e "../ITWOM/itm" -e "../ITWOM/itwom_client" && .venv/Scripts/pytest
 ```
 
 `ratplan_terrain`'s own tests that call into `ratplan_itm`/`ratplan_itwom` (`tests/primitives/
@@ -80,8 +100,8 @@ No lint/format tooling configured yet, anywhere in this repo.
 - `Goal.md` — one-paragraph statement of mission intent, including the "ITWOM as prior + Bayesian
   kriging correction" idea `model.md` §§2–3 formalizes.
 - `pseudocode.md` — superseded v1 sketch, kept for reference only.
-- `pseudocode-v2.md` — the authoritative algorithm spec for the DP's control flow (restored from the
-  archived `rattfallan` implementation this restart — see `architecture.md` §6's provenance note).
+- `pseudocode-v2.md` — **non-authoritative as of 2026-09-22** (see "Project status" above); historical
+  reference only, kept on disk with an in-place banner explaining why.
 - `OPEN_ISSUES.md` — running log of upstream issues, known gaps, and unresolved implementation decisions
   discovered while building `ITWOM/`. Separate from `research/ReadingNotes.md` (Emil's own notes, don't
   edit) and from `architecture.md`/`model.md` (the designs, not a punch list).

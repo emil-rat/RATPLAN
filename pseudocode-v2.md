@@ -1,12 +1,18 @@
 # Mission planning — pseudocode (v2)
 
-> Restored 2026-09-19 from the archived `rattfallan` implementation (`arkiv/rattfallan/pseudocode-v2.md`),
-> verbatim below — this fresh `RATPLAN/` restart had lost the file even though `KONTEXT.md`'s own "Algoritm"
-> section already pointed to it. See `architecture.md` §§6–8 for how this DP fits the rest of the (also
-> restarted) program and package layout. Not otherwise updated for this restart: `Scan`'s real implementation
-> is now the physics-prior-plus-Bayesian-GP design in `architecture.md` §§2–3 (via `itm/`), not the
-> flat-circle stub this doc's own historical context (`requirements-ratmap.md`, `routing.py`) assumed when it
-> was written — the DP structure, inputs, and output shape below are otherwise still the authoritative spec.
+> **NON-AUTHORITATIVE — historical reference only, 2026-09-22.** This document is not the DP spec. It was
+> restored verbatim from the archived `rattfallan` implementation and had already been superseded by that
+> archived project's own final code by the time it was restored — e.g. its `Evaluate`/`Scan` split doesn't
+> match the archive's actual `dp.py`/`evaluate.py`, and at least one restated formula (candidate eligibility/
+> `near_edge`) encodes an assumption the archive's own code comments flagged as wrong for a real terrain-shaped
+> coverage raster (see `OPEN_ISSUES.md`'s carryover-audit entry). Per Emil's 2026-09-22 instruction, the
+> archived project (`../arkiv/RATPLAN - gammal/`, `../arkiv/rattfallan/`) is not to be used as a source for
+> this restart at all — the DP is being re-derived from scratch from `KONTEXT.md` and the real `ITWOM`/
+> `ratplan_terrain` primitives. Kept on disk for historical context only; do not cite it as spec.
+>
+> Original restoration note, kept for provenance: restored 2026-09-19 from the archived `rattfallan`
+> implementation (`arkiv/rattfallan/pseudocode-v2.md`), verbatim below — this fresh `RATPLAN/` restart had
+> lost the file even though `KONTEXT.md`'s own "Algoritm" section already pointed to it.
 
 `Scan` and `route()` below run against a local snapshot of the mission area, not live calls into `ratmap` —
 see `requirements-ratmap.md` §0 for what gets pulled and when, and `routing.py` for the (not yet decided)

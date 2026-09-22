@@ -319,15 +319,24 @@ pseudocode — this section is the value function/recurrence in isolation):
   negative — a relay chain can never loop back on itself, and progress toward the budget limits is
   monotonic by construction.
 - **Eligibility vs. ranking are two different functions, not one.** A candidate `c` near relay `p` is
-  *eligible* to extend the chain only if it sits near the edge of `p`'s coverage — formally, within the
-  outer `edge_tolerance_fraction` of `p`'s max `Scan` range:
+  *eligible* to extend the chain only if it sits near the edge of `p`'s coverage. **Re-derived 2026-09-22**
+  (the archived project's version of this filter — a straight-line-distance fraction of an isotropic max
+  range — was found to be wrong for a real DTM-LOS raster; see `OPEN_ISSUES.md`'s carryover-audit entry, not
+  carried forward): `p`'s `Scan` result is a raster of covered/uncovered cells with a real, terrain-shaped
+  boundary — not a circle. A cell is a **boundary cell** of `p`'s raster if it is covered and at least one of
+  its (8-connected) neighbor cells is uncovered. `c` is *eligible* iff its containing cell is within
+  `edge_tolerance_cells` raster-graph steps (BFS over covered cells, not straight-line distance) of some
+  boundary cell of `p`'s raster:
 
   ```
-  dist(c, p) ∈ [(1 − edge_tolerance_fraction) · R_p, R_p]
+  min_{b ∈ boundary_cells(Scan(p))} cell_steps(c, b) ≤ edge_tolerance_cells
   ```
 
-  where `R_p` is `p`'s max `Scan` range. This is a hard filter, independent of `Evaluate`'s score — a point
-  comfortably inside `p`'s coverage doesn't need this hop's puck at all. Among eligible candidates, the
+  This tracks the coverage shape `Scan` actually produces — short in terrain-occluded directions, long
+  along clear LOS — rather than assuming isotropic reach. `edge_tolerance_cells` is a raster-resolution-
+  relative tuning parameter, not a physical distance; it should be re-derived once a real raster's cell size
+  is fixed, not ported as a physical-distance constant. This is a hard filter, independent of `Evaluate`'s
+  score — a point comfortably inside `p`'s coverage doesn't need this hop's puck at all. Among eligible candidates, the
   DP's beam keeps the top `K` (`beam width`) by **pure reach** — `route(c, p).distance_m` — not by
   `Evaluate`'s score; `Evaluate`, `Samband`, and retreat/resupply routes are still computed for every
   survivor (they decide the final cross-level ranking, reported in the output), but they play no role in

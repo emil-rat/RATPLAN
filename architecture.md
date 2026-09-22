@@ -109,6 +109,15 @@ Practical read: **two separate risks, of very different severity.**
 
 ## 5. Full program architecture
 
+> **§§5–6 NON-AUTHORITATIVE — historical reference only, 2026-09-22.** The DP structure, package layout, and
+> "carried forward unchanged" framing below were inherited from the archived `rattfallan` project. A carryover
+> audit found the restated eligibility math doesn't hold for a real terrain-shaped coverage raster, the local
+> routing layer hand-duplicates `ratmap`'s weight function under an unstated symmetric-cost assumption the
+> archive's own docs flagged as conditional (not invariant), and `pseudocode-v2.md` (§5's other source) was
+> itself already stale relative to the archive's own final code (see `OPEN_ISSUES.md`). Per Emil's 2026-09-22
+> instruction, the archived project is not a source for this restart — §§5–6 are kept for historical context
+> only. The DP (shape, value function, primitives, package layout) is being re-derived from scratch.
+
 §§1–4 above are the internals of `Scan` — one primitive in a larger algorithm. This section places that module in the whole program, per `pseudocode-v2.md` (restored from the archived `rattfallan` implementation — see §6's provenance note) and the predecessor's `implementation.md`/`CLAUDE.md`, updated for this restart's connectivity design.
 
 The predecessor project (archived at `arkiv/rattfallan`) already answered the shape question once, under one hard constraint carried forward here: **modularity** — every "hard" primitive (`Scan`, `Evaluate`, `BatteryModel`, `Samband`, local `route()`) is independently swappable, without the DP or any other primitive needing to change. This restart keeps that constraint; what's changed since the archived version is `Scan` itself, upgraded from a flat-circle stub to the physics-prior-plus-Bayesian-GP design in §2/`model.md` §§2–4.
