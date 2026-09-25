@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from ratplan_terrain.models.geometry import Position
-from ratplan_planner.models.coverage import CoverageRaster, covered_from_margin
+from ratplan_connectivity.models.coverage import CoverageRaster, covered_from_margin
 
 
 def _square_raster(covered: list[list[bool]]) -> CoverageRaster:

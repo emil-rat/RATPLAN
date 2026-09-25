@@ -29,7 +29,7 @@ RATPLAN's output rests on two distinct mathematical models, developed to differe
 1. **The connectivity/coverage model** (§§2–4) — how a coverage posterior (expected signal strength/link
    probability, plus confidence) is produced and updated for a candidate sender position. Reasonably
    mature: Tier 0–2 of `reading_list.md` are read and the equations are settled, even though the code
-   (`ITWOM/itm/`, `ITWOM/itwom/`) currently only implements the physics-prior half (§2), not the GP/kriging
+   (`connectivity_module/ITWOM/itm/`, `connectivity_module/ITWOM/itwom/`) currently only implements the physics-prior half (§2), not the GP/kriging
    correction (§3) yet.
 2. **The mission-planner optimization model** (§5) — the dynamic program that searches road positions for
    relay chains. Fully specified in `pseudocode-v2.md`; §5 here restates its value function and recurrence
@@ -65,7 +65,7 @@ is uncorrelated small-scale/multipath noise.
 
 ## 3. Connectivity model — Bayesian/kriging correction
 
-**Status: designed, not yet implemented.** `ITWOM/itm/` and `ITWOM/itwom/` produce `m(x)` only; nothing in
+**Status: designed, not yet implemented.** `connectivity_module/ITWOM/itm/` and `connectivity_module/ITWOM/itwom/` produce `m(x)` only; nothing in
 the codebase yet computes a posterior. This section is the target design for that layer.
 
 ### 3.1 Gaussian Process formulation
@@ -261,7 +261,7 @@ whether the math above is otherwise settled:
   Measured `β` values are environment-specific (Gudmundson: tens of metres in dense urban macrocells,
   larger in open terrain) — nobody has published a measurement for Swedish forest at tactical relay-hop
   distances. Needs field measurement, not more reading.
-- **Ground constants and climate are uncalibrated defaults.** `ITWOM/itm/`'s `GroundConstants` (relative
+- **Ground constants and climate are uncalibrated defaults.** `connectivity_module/ITWOM/itm/`'s `GroundConstants` (relative
   permittivity 15, conductivity 0.005 S/m) and `Climate.CONTINENTAL_TEMPERATE` are itmlogic's own example
   values, not fit to Swedish/Nordic terrain (`OPEN_ISSUES.md`).
 

@@ -1,0 +1,26 @@
+[project]
+name = "ratplan-connectivity"
+version = "0.1.0"
+description = "RATPLAN's connectivity computation — ITM physics-prior grid scan plus the fixed-grid Bayesian/GP correction that folds in live RSSI"
+requires-python = ">=3.11"
+dependencies = [
+    "ratplan-terrain",
+    "ratplan-itm",
+    # ratplan_terrain.primitives.terrain_profile unconditionally imports ratplan_itwom too, even though
+    # scan.py only ever calls the ITM half of it - needed transitively for the import to succeed.
+    "ratplan-itwom-client",
+    "scipy>=1.11",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["ratplan_connectivity*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

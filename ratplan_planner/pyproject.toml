@@ -5,11 +5,7 @@ description = "RATPLAN's mission planner — the DP over road positions (model.m
 requires-python = ">=3.11"
 dependencies = [
     "ratplan-terrain",
-    "ratplan-itm",
-    # ratplan_terrain.primitives.terrain_profile unconditionally imports ratplan_itwom too, even though
-    # scan.py only ever calls the ITM half of it - needed transitively for the import to succeed.
-    "ratplan-itwom-client",
-    "scipy>=1.11",
+    "ratplan-connectivity",
 ]
 
 [project.optional-dependencies]

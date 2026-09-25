@@ -59,7 +59,7 @@ def write_sdf(
     splat.cpp (LoadSDF_SDF's read loop and GetElevation's lat/lon->index
     formula), not from srtm2sdf.c's HGT-reading logic — we're synthesizing
     values to satisfy the *reader*, not reproducing the *writer*'s original
-    SRTM-derived array layout. See ITWOM/itwom/README.md for the derivation.
+    SRTM-derived array layout. See connectivity_module/ITWOM/itwom/README.md for the derivation.
 
     GetElevation(lat, lon) reads data[x][y] where:
         x = round(ippd * (lat - min_north))

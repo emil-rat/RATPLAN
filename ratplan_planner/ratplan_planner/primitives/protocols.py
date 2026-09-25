@@ -13,7 +13,7 @@ from typing import Protocol
 
 from ratplan_terrain.models.geometry import Position
 
-from ratplan_planner.models.coverage import CoverageRaster
+from ratplan_connectivity.models.coverage import CoverageRaster
 from ratplan_planner.models.route import RouteLeg
 
 

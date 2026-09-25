@@ -25,10 +25,10 @@ from rasterio.transform import from_origin
 from ratplan_terrain.models.geometry import Position
 from ratplan_terrain.primitives.terrain import DtmSampler
 
-from ratplan_planner.models.coverage import CoverageRaster
-from ratplan_planner.primitives.gp_correction import GpCorrector
-from ratplan_planner.primitives.kernel import ArdKernel
-from ratplan_planner.primitives.scan import ItmGridScan, RadioParams, physics_mean_db
+from ratplan_connectivity.models.coverage import CoverageRaster
+from ratplan_connectivity.primitives.gp_correction import GpCorrector
+from ratplan_connectivity.primitives.kernel import ArdKernel
+from ratplan_connectivity.primitives.scan import ItmGridScan, RadioParams, physics_mean_db
 
 SENDER = Position(lon=17.0, lat=60.0)
 _RADIO = RadioParams(tx_power_dbm=10.0, rx_sensitivity_dbm=-70.0, frequency_mhz=433.0)

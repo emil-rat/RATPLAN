@@ -3,12 +3,20 @@ terrain-relative context, so the kernel can correlate cells that are *similar*, 
 here is derived from data `ratplan_terrain`/`ratplan_itm` already produce (no land-cover: confirmed via
 `ratplan_terrain/io/ratmap_client.py`'s own note that it has no consumer here yet).
 
-Feature order is fixed and shared by `kernel.ArdKernel`: (x_m, y_m, elevation_m, bearing_sin, bearing_cos,
-los_obstruction_count) — working-CRS position, ground elevation at the point, unit bearing from the sender
-(sin/cos rather than a raw angle, so 359° and 1° aren't treated as maximally different), and a count of how
-many terrain samples along the sender-to-point line pierce the straight tx/rx sightline — a proxy for
-"where ITM's own free-space/diffraction assumption is likely violated," deliberately not a restatement of
-raw elevation (model.md §3.5's caveat about not duplicating what `m(x)` already encodes).
+Feature order is fixed and shared by `kernel.ArdKernel`: (x_m, y_m, elevation_m, distance_m, bearing_sin,
+bearing_cos, los_obstruction_count) — working-CRS position, ground elevation at the point, straight-line
+range from the sender, unit bearing from the sender (sin/cos rather than a raw angle, so 359° and 1° aren't
+treated as maximally different), and a count of how many terrain samples along the sender-to-point line
+pierce the straight tx/rx sightline — a proxy for "where ITM's own free-space/diffraction assumption is
+likely violated," deliberately not a restatement of raw elevation (model.md §3.5's caveat about not
+duplicating what `m(x)` already encodes).
+
+`distance_m` is a deliberate exception to that same caveat: `m(x)` (ITM path loss) is already a function of
+range, so this risks the residual re-learning a trend the mean already captures. It's included anyway to let
+the kernel correlate residuals *by range band* — ITM's own error is plausibly range-dependent (near-field vs.
+diffraction-regime effects), which is a legitimate source of unexplained structure, not just a restatement of
+the mean. Revisit if online parameter fitting (model.md §3.2) shows this feature's lengthscale collapsing to
+something that just mimics `m(x)`'s own distance dependence.
 """
 
 from __future__ import annotations
@@ -22,7 +30,7 @@ from pyproj import Transformer
 from ratplan_terrain.models.geometry import WGS84_CRS, WORKING_CRS, Position
 from ratplan_terrain.primitives.terrain import DtmSampler
 
-FEATURE_NAMES = ("x_m", "y_m", "elevation_m", "bearing_sin", "bearing_cos", "los_obstruction_count")
+FEATURE_NAMES = ("x_m", "y_m", "elevation_m", "distance_m", "bearing_sin", "bearing_cos", "los_obstruction_count")
 N_FEATURES = len(FEATURE_NAMES)
 
 _TO_WORKING = Transformer.from_crs(WGS84_CRS, WORKING_CRS, always_xy=True)
@@ -81,7 +89,7 @@ def features_for_positions(
     sightline = tx_top[:, None] + t[None, :] * (rx_top - tx_top)[:, None]
     los_obstruction_count = np.sum(profiles > sightline, axis=1).astype(np.float64)
 
-    values = np.stack([xs, ys, rx_ground_m, bearing_sin, bearing_cos, los_obstruction_count], axis=-1)
+    values = np.stack([xs, ys, rx_ground_m, dist, bearing_sin, bearing_cos, los_obstruction_count], axis=-1)
     return GridFeatures(values=values)
 
 

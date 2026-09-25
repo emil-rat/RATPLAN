@@ -18,8 +18,8 @@ from ratplan_terrain.models.geometry import Position
 from ratplan_terrain.primitives.terrain import DtmSampler
 from ratplan_terrain.primitives.terrain_profile import terrain_profile_from_dtm
 
-from ratplan_planner.models.coverage import CoverageRaster, covered_from_margin
-from ratplan_planner.primitives.kernel import ArdKernel
+from ratplan_connectivity.models.coverage import CoverageRaster, covered_from_margin
+from ratplan_connectivity.primitives.kernel import ArdKernel
 
 _FREE_SPACE_CONST_DB = 32.44  # FSPL(d_km, f_mhz) = 20*log10(d_km) + 20*log10(f_mhz) + 32.44
 _RELIABILITY_PCT = 90.0  # Emil's choice: a conservative point estimate, not the median case

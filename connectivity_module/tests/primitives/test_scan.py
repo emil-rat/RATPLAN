@@ -17,8 +17,8 @@ from rasterio.transform import from_origin
 from ratplan_terrain.models.geometry import Position
 from ratplan_terrain.primitives.terrain import DtmSampler
 
-from ratplan_planner.primitives.kernel import ArdKernel
-from ratplan_planner.primitives.scan import ItmGridScan, RadioParams
+from ratplan_connectivity.primitives.kernel import ArdKernel
+from ratplan_connectivity.primitives.scan import ItmGridScan, RadioParams
 
 SENDER = Position(lon=17.0, lat=60.0)
 _WEAK_RADIO = RadioParams(tx_power_dbm=10.0, rx_sensitivity_dbm=-70.0, frequency_mhz=433.0)

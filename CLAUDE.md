@@ -12,20 +12,37 @@ to be used as a source for this restart at all** — a carryover audit found rea
 inherited from it (not just unvalidated stubs), documented in `OPEN_ISSUES.md`'s "Archive carryover audit"
 entry. `pseudocode-v2.md` and `architecture.md` §§5–6 are marked non-authoritative in-place as a result (kept
 on disk for historical context only); the DP is being re-derived from scratch against `KONTEXT.md` and the
-real `ITWOM`/`ratplan_terrain` primitives, starting with `ratplan_planner/` (below). What exists today:
+real `ITWOM`/`ratplan_terrain` primitives, starting with `ratplan_planner/` (below). **2026-09-23:**
+everything that computes RF connectivity — the ITWOM/ITM engines and the concrete `Scan`/GP implementation
+that consumes them — was pulled out of `ratplan_planner/` into its own `connectivity_module/`, so the
+planner package now holds only the DP/mission-planning code. What exists today:
 
-- **`ITWOM/`** — the connectivity module's two physics-prior implementations, both working end-to-end
-  against real Lantmäteriet terrain (via `ratplan_terrain/`, below):
-  - `ITWOM/itm/` (`ratplan_itm`) — ITM (Longley-Rice) via `itmlogic`, in-process, MIT-licensed. Own
-    `pyproject.toml`/`.venv`. Takes a plain `TerrainProfile`, decoupled from any GIS stack.
-  - `ITWOM/itwom/` — ITWOM v3.0 via unmodified upstream SPLAT!, GPL-2.0, runs as its own Docker container —
-    **third-party code, not RATPLAN's own; don't edit it as if it were.** Fills its own SPLAT!-native
-    terrain tile from a real elevation grid supplied in the request (`elevation_m()`), not the old
-    synthetic base+ridge formula.
-  - `ITWOM/itwom_client/` (`ratplan_itwom`) — RATPLAN's own arm's-length client for the above, talks to the
-    container over stdin/stdout JSON. Own `pyproject.toml`/`.venv`.
-  - See `ITWOM/README.md` and `architecture.md` §§3–4 for why the ITWOM half is a separate service rather
-    than an in-process library (GPL-2.0 licensing boundary) — that distinction matters, don't collapse it.
+- **`connectivity_module/`** — everything that computes RF connectivity, in two subfolders:
+  - **`connectivity_module/ITWOM/`** — the two physics-prior implementations, both working end-to-end
+    against real Lantmäteriet terrain (via `ratplan_terrain/`, below):
+    - `ITWOM/itm/` (`ratplan_itm`) — ITM (Longley-Rice) via `itmlogic`, in-process, MIT-licensed. Own
+      `pyproject.toml`/`.venv`. Takes a plain `TerrainProfile`, decoupled from any GIS stack.
+    - `ITWOM/itwom/` — ITWOM v3.0 via unmodified upstream SPLAT!, GPL-2.0, runs as its own Docker
+      container — **third-party code, not RATPLAN's own; don't edit it as if it were.** Fills its own
+      SPLAT!-native terrain tile from a real elevation grid supplied in the request (`elevation_m()`), not
+      the old synthetic base+ridge formula.
+    - `ITWOM/itwom_client/` (`ratplan_itwom`) — RATPLAN's own arm's-length client for the above, talks to
+      the container over stdin/stdout JSON. Own `pyproject.toml`/`.venv`.
+    - See `connectivity_module/ITWOM/README.md` and `architecture.md` §§3–4 for why the ITWOM half is a
+      separate service rather than an in-process library (GPL-2.0 licensing boundary) — that distinction
+      matters, don't collapse it.
+  - **`connectivity_module/ratplan_connectivity/`** (own `pyproject.toml`/`.venv`, depends on
+    `ratplan_terrain`/`ratplan_itm`/`ratplan_itwom_client`) — the concrete `Scan(position) -> CoverageRaster`
+    implementation, landed 2026-09-22 (`43c35fe` "GP implementation, first try"; Emil owns this code, don't
+    build on it unprompted): `models/coverage.py` (`CoverageRaster` — a real lat/lon covered-cell grid with a
+    reachable-cell-boundary eligibility filter, re-derived from model.md §5 to replace the archive's
+    isotropic-circle `near_edge` formula, which didn't hold for a real DTM-LOS-shaped raster), and
+    `primitives/`: `scan.py` (`ItmGridScan` — the physics-prior grid scan, always pure ITM, never touches
+    observations/GP state), `gp_correction.py` (`GpCorrector` — the fixed-grid recursive Bayesian/GP
+    correction folding live RSSI into the ITM prior at flat per-observation cost; not wired into any live
+    RSSI ingestion pipeline yet), and `kernel.py`/`features.py` (the GP's ARD covariance kernel and augmented
+    feature vector, `model.md` §3.5). See `CLAUDE_SESSIONS.md`'s 2026-09-22 entry for the full design
+    rationale and what's still out of scope.
 - **`ratplan_terrain/`** — real-terrain plumbing, a fresh package (own `pyproject.toml`/`.venv`), structurally
   parallel to `ratplan_itm`/`ratplan_itwom` rather than part of the future mission-planner package (whatever
   that ends up being named — `architecture.md` §6's `rattfallan/` target layout predates this and is not
@@ -35,18 +52,24 @@ real `ITWOM`/`ratplan_terrain` primitives, starting with `ratplan_planner/` (bel
   own terrain inputs).
 - **`mapviz/`** — a scoped-down visual sanity-check tool (terrain hillshade + road network on MapLibre), not
   wired to `Scan` yet. See `mapviz/README.md`.
+- **`simulation_tool/`** — 2026-09-25: a second, separate visual tool wired to the real Scan/GP pipeline —
+  click to place a relay and see its `ItmGridScan`-derived `CoverageRaster`, then click to place
+  manually-entered-RSSI observations and see `GpCorrector.observe()`/`.corrected_raster()` reshape it live.
+  Single active relay at a time (placing a new one replaces the previous relay, its corrector, and its
+  observations) — the seed of an eventual broader simulation tool, not multi-relay yet. See
+  `simulation_tool/README.md` and `architecture.md` §8/§9 for how it relates to `mapviz/` (stays
+  terrain+roads-only) and `rattfallan-demo` (UI-pattern reference only, backend calls stale).
 - **`ratplan_planner/`** — the mission-planner package (own `pyproject.toml`/`.venv`, depends on
-  `ratplan_terrain`), started fresh 2026-09-22 without reference to the archive. So far: `models/` (`RouteLeg`,
-  `CoverageRaster` — a real lat/lon covered-cell grid with a reachable-cell-boundary eligibility filter,
-  re-derived from model.md §5 to replace the archive's isotropic-circle `near_edge` formula, which didn't hold
-  for a real DTM-LOS-shaped raster; `MissionInput` fields taken directly from `KONTEXT.md`'s "Indata", not
-  `pseudocode-v2.md`; `CandidateResult`/`PlanResult` from `KONTEXT.md`'s "Utdata") and `primitives/protocols.py`
-  (the five swappable-primitive `Protocol`s: `Scan`/`Evaluate`/`BatteryModel`/`Samband`/`Router`, unimplemented).
-  **Not yet built**: the real `Scan` implementation (grid-sampling via `ratplan_itm`/`ratplan_itwom` — needs a
-  resolution/performance budget first), the road-graph candidate generator, `planner/dp.py` itself, the local
-  `Router` (needs re-justifying the symmetric-cost assumption per the carryover audit, not silently re-porting
-  it), and `Evaluate`/`BatteryModel`/`Samband` (still no math — `model.md` §§6–7) — and the GP/kriging
-  Bayesian-correction layer on top of ITM/ITWOM (`model.md` §3 — designed, not implemented).
+  `ratplan_terrain` and `ratplan_connectivity`), started fresh 2026-09-22 without reference to the archive,
+  and now holding only the planning algorithm itself. So far: `models/` (`RouteLeg`; `MissionInput` fields
+  taken directly from `KONTEXT.md`'s "Indata", not `pseudocode-v2.md`; `CandidateResult`/`PlanResult` from
+  `KONTEXT.md`'s "Utdata", each candidate holding its own private
+  `ratplan_connectivity.models.coverage.CoverageRaster`) and `primitives/protocols.py` (the five
+  swappable-primitive `Protocol`s: `Scan`/`Evaluate`/`BatteryModel`/`Samband`/`Router`, unimplemented here —
+  `Scan`'s concrete implementation lives in `connectivity_module/ratplan_connectivity/`, not in this
+  package). **Not yet built**: the road-graph candidate generator, `planner/dp.py` itself, the local
+  `Router` (needs re-justifying the symmetric-cost assumption per the carryover audit, not silently
+  re-porting it), and `Evaluate`/`BatteryModel`/`Samband` (still no math — `model.md` §§6–7).
 
 Two documents split "what RATPLAN computes" from "how it's built":
 
@@ -62,31 +85,36 @@ Two documents split "what RATPLAN computes" from "how it's built":
 When the two disagree on *what* a component computes, `model.md` wins; on *where/how it runs*,
 `architecture.md` wins.
 
-Setup, per component (`ITWOM/itm` and `ITWOM/itwom_client` are still independently installable with their
+Setup, per component (`connectivity_module/ITWOM/itm` and `connectivity_module/ITWOM/itwom_client` are still independently installable with their
 own `.venv`; `ratplan_terrain` is a separate root-level package with its own `pyproject.toml`, not yet folded
-into either of theirs):
+into any of the others):
 
 ```
-cd ITWOM/itm && python -m venv .venv && .venv/Scripts/pip install -e ".[dev]" && .venv/Scripts/pytest
-cd ITWOM/itwom_client && python -m venv .venv && .venv/Scripts/pip install -e ".[dev]" && .venv/Scripts/pytest -m docker
+cd connectivity_module/ITWOM/itm && python -m venv .venv && .venv/Scripts/pip install -e ".[dev]" && .venv/Scripts/pytest
+cd connectivity_module/ITWOM/itwom_client && python -m venv .venv && .venv/Scripts/pip install -e ".[dev]" && .venv/Scripts/pytest -m docker
 
 # ratplan_terrain (real-terrain plumbing) -- from RATPLAN/
 python -m venv .venv && .venv/Scripts/pip install -e ".[dev]" && .venv/Scripts/pytest
 
-# ratplan_planner (mission planner) -- from RATPLAN/ratplan_planner/; needs Python >=3.11,
-# ratplan_terrain, ratplan_itm (Scan/GpCorrector call it directly, not just via ratplan_terrain), and
-# ratplan_itwom_client (ratplan_terrain.primitives.terrain_profile imports it unconditionally even though
-# Scan only ever uses the ITM half) installed alongside it
-cd ratplan_planner && python -m venv .venv && .venv/Scripts/pip install -e ".[dev]" -e ".." -e "../ITWOM/itm" -e "../ITWOM/itwom_client" && .venv/Scripts/pytest
+# ratplan_connectivity (Scan/GP implementation) -- from RATPLAN/connectivity_module/; needs Python >=3.11,
+# ratplan_terrain, ratplan_itm, and ratplan_itwom_client (ratplan_terrain.primitives.terrain_profile imports
+# it unconditionally even though scan.py only ever uses the ITM half) installed alongside it
+cd connectivity_module && python -m venv .venv && .venv/Scripts/pip install -e ".[dev]" -e ".." -e "./ITWOM/itm" -e "./ITWOM/itwom_client" && .venv/Scripts/pytest
+
+# ratplan_planner (mission planner) -- from RATPLAN/ratplan_planner/; needs Python >=3.11, ratplan_terrain,
+# and ratplan_connectivity installed alongside it. ratplan_connectivity declares ratplan_itm/
+# ratplan_itwom_client as name-only deps (no PyPI package exists for either), so they need installing from
+# their local paths here too, even though ratplan_planner itself never imports them directly.
+cd ratplan_planner && python -m venv .venv && .venv/Scripts/pip install -e ".[dev]" -e ".." -e "../connectivity_module" -e "../connectivity_module/ITWOM/itm" -e "../connectivity_module/ITWOM/itwom_client" && .venv/Scripts/pytest
 ```
 
 `ratplan_terrain`'s own tests that call into `ratplan_itm`/`ratplan_itwom` (`tests/primitives/
-test_terrain_profile.py`, `ITWOM/itwom_client/tests/test_client.py`'s real-terrain cases) need those
-packages installed in the same environment as `ratplan_terrain` too — `pip install -e ITWOM/itm
--e ITWOM/itwom_client` alongside `-e .`.
+test_terrain_profile.py`, `connectivity_module/ITWOM/itwom_client/tests/test_client.py`'s real-terrain
+cases) need those packages installed in the same environment as `ratplan_terrain` too —
+`pip install -e connectivity_module/ITWOM/itm -e connectivity_module/ITWOM/itwom_client` alongside `-e .`.
 
-`ITWOM/itwom_client`'s tests need Docker running and the `ratplan-itwom-service` image built (see
-`ITWOM/itwom/README.md`) — marked `docker`, skipped without that marker.
+`connectivity_module/ITWOM/itwom_client`'s tests need Docker running and the `ratplan-itwom-service` image built (see
+`connectivity_module/ITWOM/itwom/README.md`) — marked `docker`, skipped without that marker.
 
 A root `tests/` tree exists (`tests/conftest.py`, `tests/README.md`, config folded into the root
 `pyproject.toml`'s `[tool.pytest.ini_options]`) — today it covers `ratplan_terrain/` (`tests/models/`,
@@ -107,6 +135,8 @@ No lint/format tooling configured yet, anywhere in this repo.
   edit) and from `architecture.md`/`model.md` (the designs, not a punch list).
 - `research/reading_list.md` — the GP/kriging/kriging-vs-anisotropy literature `model.md` §§2–4 is built on,
   with full citations and confidence ratings per source.
+- `CLAUDE_SESSIONS.md` — running log of what Claude Code sessions did, one entry per session, tied to the
+  git commit(s) each one produced. Separate from `OPEN_ISSUES.md` (issues/gaps, not session history).
 
 ## What Råttfällan/RATPLAN is
 
@@ -147,7 +177,7 @@ Core primitives (`architecture.md` §5 diagram, `model.md` §§6–7 for the two
   candidate. Every result is theoretical: a puck is only ever *really* placed once the UGV has physically
   driven there and dropped it, during mission execution — never during planning. Implementation target:
   ITM/ITWOM physics prior (`architecture.md` §§2–3, working) plus a GP/kriging Bayesian correction from live
-  RSSI (`model.md` §3, designed but not implemented).
+  RSSI (`model.md` §3) — both implemented in `connectivity_module/ratplan_connectivity/`.
 - `Evaluate(position, raster) -> (score, description)` — quantitative 0–1 `score` (exposure/cover via DTM +
   land-cover, with enemy-standoff distance as a soft penalty, combined with an assistance score: path time
   to the supply unit) used for ranking, plus a qualitative LLM-generated `description` carried through to

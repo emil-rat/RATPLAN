@@ -38,10 +38,10 @@ from scipy.linalg import cho_factor, cho_solve
 from ratplan_terrain.models.geometry import Position
 from ratplan_terrain.primitives.terrain import DtmSampler
 
-from ratplan_planner.models.coverage import CoverageRaster, covered_from_margin
-from ratplan_planner.primitives.features import GridFeatures, features_for_position, features_for_positions
-from ratplan_planner.primitives.kernel import ArdKernel
-from ratplan_planner.primitives.scan import RadioParams, physics_mean_db
+from ratplan_connectivity.models.coverage import CoverageRaster, covered_from_margin
+from ratplan_connectivity.primitives.features import GridFeatures, features_for_position, features_for_positions
+from ratplan_connectivity.primitives.kernel import ArdKernel
+from ratplan_connectivity.primitives.scan import RadioParams, physics_mean_db
 
 
 def _cell_center_positions(raster: CoverageRaster) -> list[Position]:

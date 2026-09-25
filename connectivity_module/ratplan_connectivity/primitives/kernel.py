@@ -10,6 +10,9 @@ and stays positive-definite once more dimensions are added (a product of PD kern
 grouped where they share one physical meaning rather than each getting an independent lengthscale: `x_m`
 and `y_m` share `lengthscale_position` (no basis yet for anisotropic-in-plane behavior), `bearing_sin` and
 `bearing_cos` share `lengthscale_bearing` (they're one angular quantity, not two independent ones).
+`distance_m` (range from the sender) gets its own `lengthscale_distance` rather than sharing
+`lengthscale_position` — it's a derived, sender-relative radial coordinate, not another absolute-position
+axis, so there's no reason to assume the same decorrelation scale applies.
 
 **Read this before changing the lengthscale defaults.** Because the feature distances are *summed* inside
 the exponent (not the kernel values multiplied *after* separately deciding relevance), two cells that are
@@ -32,7 +35,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from ratplan_planner.primitives.features import GridFeatures
+from ratplan_connectivity.primitives.features import GridFeatures
 
 
 @dataclass(frozen=True)
@@ -41,6 +44,7 @@ class ArdKernel:
     sigma2: float = 4.0  # measurement noise variance, dB^2 (~2 dB RSSI noise std - placeholder)
     lengthscale_position: float = 150.0  # meters - deliberately longer than the ~50m placeholder beta
     lengthscale_elevation: float = 20.0  # meters
+    lengthscale_distance: float = 150.0  # meters - range-from-sender band width, same order as position
     lengthscale_bearing: float = 0.5  # dimensionless (sin/cos units, range [-1, 1])
     lengthscale_los_count: float = 1.0  # obstruction-count units
 
@@ -51,6 +55,7 @@ class ArdKernel:
                 self.lengthscale_position,
                 self.lengthscale_position,
                 self.lengthscale_elevation,
+                self.lengthscale_distance,
                 self.lengthscale_bearing,
                 self.lengthscale_bearing,
                 self.lengthscale_los_count,
@@ -63,7 +68,7 @@ class ArdKernel:
 
     def matrix(self, features: GridFeatures) -> np.ndarray:
         """The full `N x N` kernel matrix over `features` (`K_uu`, `gp_correction.py`). Accumulates the
-        per-dimension distance sum one dimension at a time rather than broadcasting an `(N, N, 6)` array,
+        per-dimension distance sum one dimension at a time rather than broadcasting an `(N, N, 7)` array,
         to keep peak memory at `O(N^2)` instead of `O(N^2 * n_features)`."""
         z = features.values
         n = z.shape[0]
