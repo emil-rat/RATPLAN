@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>RATPLAN simulation tool</title>
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <link rel="stylesheet" href="./vendor/maplibre-gl.css" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div id="map"></div>
+  <div id="toolbar">
+    <button id="mode-relay" type="button">Place relay</button>
+    <button id="mode-observe" type="button">Add observation</button>
+    <input id="rssi-input" type="number" step="1" placeholder="RSSI dBm" />
+    <button id="reset-btn" type="button">Reset</button>
+  </div>
+  <div id="legend">
+    <div class="legend-bar"></div>
+    <div class="legend-labels">
+      <span>-20</span>
+      <span>0</span>
+      <span>15</span>
+      <span>40+ dB margin</span>
+    </div>
+  </div>
+  <div id="status"></div>
+  <script src="./vendor/maplibre-gl.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
